@@ -1,111 +1,169 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-void main() => runApp(MyApp());
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:iamport_flutter/iamport_payment.dart';
+import 'package:iamport_flutter/model/payment_data.dart';
+import 'package:provider/provider.dart';
+
+void main() => runApp(
+  ChangeNotifierProvider<Connect>(
+    create: (_) => new Connect(),
+    child: MaterialApp(
+      home: MyApp(),
+    ),
+  )
+);
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    Connect _connect = Provider.of<Connect>(context);
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+      appBar: AppBar(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            child: Column(
+              children: <Widget>[
+                Container(),
+                !_connect.isCheck
+                ? RaisedButton(
+                  child: Text("Net WorkERR"),
+                  onPressed: () => _connect.fetch(),
+                )
+                : Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height/2,
+                  child: GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 10.0,
+                      crossAxisSpacing: 10.0
+                    ),
+                    padding: EdgeInsets.all(10.0),
+                    itemCount: _connect.result.length,
+                    itemBuilder: (BuildContext context, int index) => InkWell(
+                      onTap: (){
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => Payment(data: _connect.result[index])
+                          )
+                        );
+                      },
+                      child: Container(
+                        color: Colors.grey,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Text(_connect.result[index]['title']),
+                              Text(_connect.result[index]['ea']),
+                              Text(_connect.result[index]['price']),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  ),
+                )
+              ],
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-          ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+}
+
+
+// ignore: must_be_immutable
+class Payment extends StatelessWidget {
+
+  dynamic data;
+
+  Payment({@required this.data})
+   : assert(data != null);
+
+  @override
+  Widget build(BuildContext context) {
+    return IamportPayment(
+      appBar: new AppBar(
+        title: new Text('아임포트 결제'),
+      ),
+      /* 웹뷰 로딩 컴포넌트 */
+      initialChild: Container(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.network('https://cdn.pixabay.com/photo/2020/04/01/22/14/lover-4992877__480.png'),
+              Container(
+                padding: EdgeInsets.fromLTRB(0.0, 30.0, 0.0, 0.0),
+                child: Text('잠시만 기다려주세요...', style: TextStyle(fontSize: 20.0)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      /* [필수입력] 가맹점 식별코드 */
+      userCode: '',
+      /* [필수입력] 결제 데이터 */
+      data: PaymentData.fromJson({
+        'pg': 'kakaopay',                                              // PG사
+        'payMethod': 'card',                                           // 결제수단
+        'name': '아임포트 결제데이터 분석',                                   // 주문명
+        'merchantUid': 'mid_${DateTime.now().millisecondsSinceEpoch}', // 주문번호
+        'amount': int.parse(data['price'].toString()),                 // 결제금액
+        'buyerName': '홍길동',                                           // 구매자 이름
+        'buyerTel': '01012345678',                                     // 구매자 연락처
+        'buyerEmail': 'example@naver.com',                             // 구매자 이메일
+        'buyerAddr': '서울시 강남구 신사동 661-16',                         // 구매자 주소
+        'buyerPostcode': '06018',                                      // 구매자 우편번호
+        'appScheme': 'example',                                        // 앱 URL scheme
+        'display' : {
+          'cardQuota' : [2,3]                                          //결제창 UI 내 할부개월수 제한
+        }
+      }),
+      /* [필수입력] 콜백 함수 */
+      callback:  (Map<String, String> result){
+//        print(result);
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => MyApp()),
+                (Route<dynamic> route) => false
+        );
+      },
+    );
+  }
+}
+
+class Connect with ChangeNotifier{
+  List _result;
+  bool _isCheck = false;
+
+  bool get isCheck => _isCheck;
+  set isCheck(bool newCheck) => throw "ERR ISCHECK";
+
+  List get result => _result;
+  set result(List newResult) => throw "ERRRSETTER";
+
+  Future<void> fetch() async{
+    try{
+      const String url = "http://:3000/items";
+      final dynamic _res = await http.get(url);
+      _result = json.decode(_res.body);
+      _isCheck = !_isCheck;
+
+    }
+    catch(e){
+      _isCheck = !_isCheck;
+    }
+    notifyListeners();
+  }
+
+  Connect(){
+    this.fetch();
+  }
+
 }
