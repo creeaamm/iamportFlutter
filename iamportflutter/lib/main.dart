@@ -157,7 +157,7 @@ class Connect with ChangeNotifier{
 
     }
     catch(e){
-      _isCheck = !_isCheck;
+      _isCheck = false;
     }
     notifyListeners();
   }
